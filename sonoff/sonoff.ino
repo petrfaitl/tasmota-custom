@@ -2803,11 +2803,13 @@ void setup()
     }
   }
 
-  // Issue #526
-  for (byte i = 0; i < Maxdevice; i++) {
-    if ((pin[GPIO_REL1 +i] < 99) && (digitalRead(pin[GPIO_REL1 +i]) ^ rel_inverted[i])) {
-      bitSet(power, i);
-      pulse_timer[i] = sysCfg.pulsetime[i];
+  // Issue #526 and #909
+  for (byte i = 0; i < devices_present; i++) {
+    if ((i < MAX_RELAYS) && (pin[GPIO_REL1 +i] < 99)) {
+      bitWrite(power, i, digitalRead(pin[GPIO_REL1 +i]) ^ bitRead(rel_inverted, i));
+    }
+    if ((i < MAX_PULSETIMERS) && bitRead(power, i)) {
+      pulse_timer[i] = Settings.pulse_timer[i];
     }
   }
 

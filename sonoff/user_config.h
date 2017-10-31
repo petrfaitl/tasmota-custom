@@ -33,7 +33,7 @@
 //#define MY_LANGUAGE            nl-NL
 
 // -- Project -------------------------------------
-#define PROJECT                "LawnIrrigation"          // PROJECT is used as the default topic delimiter and OTA file name
+#define PROJECT                "LawnIrrigationTEST_BOARD"          // PROJECT is used as the default topic delimiter and OTA file name
                                                  //   As an IDE restriction it needs to be the same as the main .ino file
 
 #define CFG_HOLDER             0x20161209        // [Reset 1] Change this value to load following default configuration parameters
@@ -120,7 +120,7 @@
   #define WEB_PORT             80                // Web server Port for User and Admin mode
   #define WEB_USERNAME         "admin"           // Web server Admin mode user name
   #define WEB_PASSWORD         "hex4g0n5"                // [WebPassword] Web server Admin mode Password for WEB_USERNAME (empty string = Disable)
-  #define FRIENDLY_NAME        "Front Lawn Irrigation"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+  #define FRIENDLY_NAME        "Front Lawn Irrigation TEST BOARD"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
   #define USE_EMULATION                          // Enable Belkin WeMo and Hue Bridge emulation for Alexa (+11k code, +2k mem)
     #define EMULATION          EMUL_NONE         // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
 
@@ -199,3 +199,4 @@
 #if (ARDUINO < 10610)
   #error "This software is supported with Arduino IDE starting from 1.6.10 and ESP8266 Release 2.3.0"
 #endif
+#endif  // _USER_CONFIG_H_
