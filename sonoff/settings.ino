@@ -17,6 +17,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+const uint8_t sfb_codeDefault[9] PROGMEM = { 0x21, 0x16, 0x01, 0x0E, 0x03, 0x48, 0x2E, 0x1A, 0x00 };
+
 /*********************************************************************************************\
  * RTC memory
 \*********************************************************************************************/
@@ -79,8 +81,7 @@ boolean RTC_Valid()
 void RTC_Dump()
 {
   #define CFG_COLS 16
-  
-  char log[LOGSZ];
+
   uint16_t idx;
   uint16_t maxrow;
   uint16_t row;
@@ -91,22 +92,22 @@ void RTC_Dump()
 
   for (row = 0; row < maxrow; row++) {
     idx = row * CFG_COLS;
-    snprintf_P(log, sizeof(log), PSTR("%04X:"), idx);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%04X:"), idx);
     for (col = 0; col < CFG_COLS; col++) {
       if (!(col%4)) {
-        snprintf_P(log, sizeof(log), PSTR("%s "), log);
+        snprintf_P(log_data, sizeof(log_data), PSTR("%s "), log_data);
       }
-      snprintf_P(log, sizeof(log), PSTR("%s %02X"), log, buffer[idx + col]);
+      snprintf_P(log_data, sizeof(log_data), PSTR("%s %02X"), log_data, buffer[idx + col]);
     }
-    snprintf_P(log, sizeof(log), PSTR("%s |"), log);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%s |"), log_data);
     for (col = 0; col < CFG_COLS; col++) {
 //      if (!(col%4)) {
-//        snprintf_P(log, sizeof(log), PSTR("%s "), log);
+//        snprintf_P(log_data, sizeof(log_data), PSTR("%s "), log_data);
 //      }
-      snprintf_P(log, sizeof(log), PSTR("%s%c"), log, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
+      snprintf_P(log_data, sizeof(log_data), PSTR("%s%c"), log_data, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
     }
-    snprintf_P(log, sizeof(log), PSTR("%s|"), log);
-    addLog(LOG_LEVEL_INFO, log);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%s|"), log_data);
+    addLog(LOG_LEVEL_INFO);
   }
 }
 #endif  // DEBUG_THEO
@@ -124,10 +125,13 @@ extern "C" uint32_t _SPIFFS_end;
 
 #define SPIFFS_END          ((uint32_t)&_SPIFFS_end - 0x40200000) / SPI_FLASH_SEC_SIZE
 
+// Version 3.x config
+#define CFG_LOCATION_3      SPIFFS_END - 4
+
 // Version 4.2 config = eeprom area
 #define CFG_LOCATION        SPIFFS_END  // No need for SPIFFS as it uses EEPROM area
 // Version 5.2 allow for more flash space
-#define CFG_ROTATES         8           // Number of additional flash sectors used (handles uploads)
+#define CFG_ROTATES         8           // Number of flash sectors used (handles uploads)
 
 uint32_t _cfgHash = 0;
 uint32_t _cfgLocation = CFG_LOCATION;
@@ -136,45 +140,26 @@ uint32_t _cfgLocation = CFG_LOCATION;
 /*
  * Based on cores/esp8266/Updater.cpp
  */
-void setFlashMode(byte option, byte mode)
+void setFlashModeDout()
 {
-  char log[LOGSZ];
   uint8_t *_buffer;
   uint32_t address;
 
-// option 0 - Use absolute address 0
-// option 1 - Use OTA/Upgrade relative address
-
-  if (option) {
-    eboot_command ebcmd;
-    eboot_command_read(&ebcmd);
-    address = ebcmd.args[0];
-  } else {
-    address = 0;
-  }
+  eboot_command ebcmd;
+  eboot_command_read(&ebcmd);
+  address = ebcmd.args[0];
   _buffer = new uint8_t[FLASH_SECTOR_SIZE];
   if (SPI_FLASH_RESULT_OK == spi_flash_read(address, (uint32_t*)_buffer, FLASH_SECTOR_SIZE)) {
-    if (_buffer[2] != mode) {
-      _buffer[2] = mode &3;
+    if (_buffer[2] != 3) {  // DOUT
+      _buffer[2] = 3;
       noInterrupts();
       if (SPI_FLASH_RESULT_OK == spi_flash_erase_sector(address / FLASH_SECTOR_SIZE)) {
         spi_flash_write(address, (uint32_t*)_buffer, FLASH_SECTOR_SIZE);
       }
       interrupts();
-      snprintf_P(log, sizeof(log), PSTR("FLSH: Set Flash Mode to %d"), (option) ? mode : ESP.getFlashChipMode());
-      addLog(LOG_LEVEL_DEBUG, log);
     }
   }
   delete[] _buffer;
-}
-
-void setModuleFlashMode(byte option)
-{
-  uint8_t mode = 0;  // QIO - ESP8266
-  if ((SONOFF_TOUCH == sysCfg.module) || (SONOFF_4CH == sysCfg.module)) {
-    mode = 3;  // DOUT - ESP8285
-  }
-  setFlashMode(option, mode);
 }
 
 uint32_t getHash()
@@ -192,22 +177,35 @@ uint32_t getHash()
  * Config Save - Save parameters to Flash ONLY if any parameter has changed
 \*********************************************************************************************/
 
-void CFG_Save(byte force)
+uint32_t CFG_Address()
 {
-  char log[LOGSZ];
+  return _cfgLocation * SPI_FLASH_SEC_SIZE;
+}
 
+void CFG_Save(byte rotate)
+{
+/* Save configuration in eeprom or one of 7 slots below
+ *
+ * rotate 0 = Save in next flash slot
+ * rotate 1 = Save only in eeprom flash slot until SetOption12 0 or restart
+ * rotate 2 = Save in eeprom flash slot, erase next flash slots and continue depending on stop_flash_rotate
+ * stop_flash_rotate 0 = Allow flash slot rotation (SetOption12 0)
+ * stop_flash_rotate 1 = Allow only eeprom flash slot use (SetOption12 1)
+ */
 #ifndef BE_MINIMAL
-  if ((getHash() != _cfgHash) || force) {
-    if (sysCfg.flag.stop_flash_rotate) {
+  if ((getHash() != _cfgHash) || rotate) {
+    if (1 == rotate) {   // Use eeprom flash slot only and disable flash rotate from now on (upgrade)
+      stop_flash_rotate = 1;
+    }
+    if (2 == rotate) {   // Use eeprom flash slot and erase next flash slots if stop_flash_rotate is off (default)
+      _cfgLocation = CFG_LOCATION +1;
+    }
+    if (stop_flash_rotate) {
       _cfgLocation = CFG_LOCATION;
     } else {
-      if (force) {
+      _cfgLocation--;
+      if (_cfgLocation <= (CFG_LOCATION - CFG_ROTATES)) {
         _cfgLocation = CFG_LOCATION;
-      } else {
-        _cfgLocation--;
-        if (_cfgLocation <= (CFG_LOCATION - CFG_ROTATES)) {
-          _cfgLocation = CFG_LOCATION;
-        }
       }
     }
     sysCfg.saveFlag++;
@@ -215,7 +213,7 @@ void CFG_Save(byte force)
     spi_flash_erase_sector(_cfgLocation);
     spi_flash_write(_cfgLocation * SPI_FLASH_SEC_SIZE, (uint32*)&sysCfg, sizeof(SYSCFG));
     interrupts();
-    if (!sysCfg.flag.stop_flash_rotate && force) {
+    if (!stop_flash_rotate && rotate) {
       for (byte i = 1; i < CFG_ROTATES; i++) {
         noInterrupts();
         spi_flash_erase_sector(_cfgLocation -i);  // Delete previous configurations by resetting to 0xFF
@@ -223,8 +221,9 @@ void CFG_Save(byte force)
         delay(1);
       }
     }
-    snprintf_P(log, sizeof(log), PSTR("Cnfg: %s (%d bytes) to flash at %X and count %d"), (force) ? "Backup" : "Save", sizeof(SYSCFG), _cfgLocation, sysCfg.saveFlag);
-    addLog(LOG_LEVEL_DEBUG, log);
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_CONFIG D_SAVED_TO_FLASH_AT " %X, " D_COUNT " %d, " D_BYTES " %d"),
+       _cfgLocation, sysCfg.saveFlag, sizeof(SYSCFG));
+    addLog(LOG_LEVEL_DEBUG);
     _cfgHash = getHash();
   }
 #endif  // BE_MINIMAL
@@ -233,8 +232,8 @@ void CFG_Save(byte force)
 
 void CFG_Load()
 {
-  char log[LOGSZ];
-
+/* Load configuration from eeprom or one of 7 slots below if first load does not stop_flash_rotate
+ */
   struct SYSCFGH {
     unsigned long cfg_holder;
     unsigned long saveFlag;
@@ -248,19 +247,30 @@ void CFG_Load()
     spi_flash_read((_cfgLocation -1) * SPI_FLASH_SEC_SIZE, (uint32*)&_sysCfgH, sizeof(SYSCFGH));
     interrupts();
 
-//  snprintf_P(log, sizeof(log), PSTR("Cnfg: Check at %X with count %d and holder %X"), _cfgLocation -1, _sysCfgH.saveFlag, _sysCfgH.cfg_holder);
-//  addLog(LOG_LEVEL_DEBUG, log);
+//  snprintf_P(log_data, sizeof(log_data), PSTR("Cnfg: Check at %X with count %d and holder %X"), _cfgLocation -1, _sysCfgH.saveFlag, _sysCfgH.cfg_holder);
+//  addLog(LOG_LEVEL_DEBUG);
 
-    if (sysCfg.flag.stop_flash_rotate || (sysCfg.cfg_holder != _sysCfgH.cfg_holder) || (sysCfg.saveFlag > _sysCfgH.saveFlag)) {
+    if (((sysCfg.version > 0x05000200) && sysCfg.flag.stop_flash_rotate) || (sysCfg.cfg_holder != _sysCfgH.cfg_holder) || (sysCfg.saveFlag > _sysCfgH.saveFlag)) {
       break;
     }
     delay(1);
   }
-  snprintf_P(log, sizeof(log), PSTR("Cnfg: Load from flash at %X and count %d"), _cfgLocation, sysCfg.saveFlag);
-  addLog(LOG_LEVEL_DEBUG, log);
+  snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_CONFIG D_LOADED_FROM_FLASH_AT " %X, " D_COUNT " %d"),
+    _cfgLocation, sysCfg.saveFlag);
+  addLog(LOG_LEVEL_DEBUG);
   if (sysCfg.cfg_holder != CFG_HOLDER) {
-    CFG_Default();
+    // Auto upgrade
+    noInterrupts();
+    spi_flash_read((CFG_LOCATION_3) * SPI_FLASH_SEC_SIZE, (uint32*)&sysCfg, sizeof(SYSCFG));
+    spi_flash_read((CFG_LOCATION_3 + 1) * SPI_FLASH_SEC_SIZE, (uint32*)&_sysCfgH, sizeof(SYSCFGH));
+    if (sysCfg.saveFlag < _sysCfgH.saveFlag)
+      spi_flash_read((CFG_LOCATION_3 + 1) * SPI_FLASH_SEC_SIZE, (uint32*)&sysCfg, sizeof(SYSCFG));
+    interrupts();
+    if ((sysCfg.cfg_holder != CFG_HOLDER) || (sysCfg.version >= 0x04020000)) {
+      CFG_Default();
+    }
   }
+
   _cfgHash = getHash();
 
   RTC_Load();
@@ -268,74 +278,80 @@ void CFG_Load()
 
 void CFG_Erase()
 {
-  char log[LOGSZ];
   SpiFlashOpResult result;
 
   uint32_t _sectorStart = (ESP.getSketchSize() / SPI_FLASH_SEC_SIZE) + 1;
   uint32_t _sectorEnd = ESP.getFlashChipRealSize() / SPI_FLASH_SEC_SIZE;
   boolean _serialoutput = (LOG_LEVEL_DEBUG_MORE <= seriallog_level);
 
-  snprintf_P(log, sizeof(log), PSTR("Cnfg: Erase %d flash sectors"), _sectorEnd - _sectorStart);
-  addLog(LOG_LEVEL_DEBUG, log);
+  snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_APPLICATION D_ERASE " %d " D_UNIT_SECTORS), _sectorEnd - _sectorStart);
+  addLog(LOG_LEVEL_DEBUG);
 
   for (uint32_t _sector = _sectorStart; _sector < _sectorEnd; _sector++) {
     noInterrupts();
     result = spi_flash_erase_sector(_sector);
     interrupts();
     if (_serialoutput) {
-      Serial.print(F("Flash: Erased sector "));
+      Serial.print(F(D_LOG_APPLICATION D_ERASED_SECTOR " "));
       Serial.print(_sector);
       if (SPI_FLASH_RESULT_OK == result) {
-        Serial.println(F(" OK"));
+        Serial.println(F(" " D_OK));
       } else {
-        Serial.println(F(" Error"));
+        Serial.println(F(" " D_ERROR));
       }
       delay(10);
     }
   }
 }
 
-void CFG_Dump(uint16_t srow, uint16_t mrow)
+void CFG_Dump(char* parms)
 {
   #define CFG_COLS 16
-  
-  char log[LOGSZ];
+
   uint16_t idx;
   uint16_t maxrow;
   uint16_t row;
   uint16_t col;
+  char *p;
 
   uint8_t *buffer = (uint8_t *) &sysCfg;
-  row = 0;
   maxrow = ((sizeof(SYSCFG)+CFG_COLS)/CFG_COLS);
-  if ((srow > 0) && (srow < maxrow)) {
-    row = srow;
+
+  uint16_t srow = strtol(parms, &p, 16) / CFG_COLS;
+  uint16_t mrow = strtol(p, &p, 10);
+
+//  snprintf_P(log_data, sizeof(log_data), PSTR("Cnfg: Parms %s, Start row %d, rows %d"), parms, srow, mrow);
+//  addLog(LOG_LEVEL_DEBUG);
+
+  if (0 == mrow) {  // Default only 8 lines
+    mrow = 8;
   }
-  if (0 == mrow) {  // Default only four lines
-    mrow = 4;
+  if (srow > maxrow) {
+    srow = maxrow - mrow;
   }
-  if ((mrow > 0) && (mrow < (maxrow - row))) {
-    maxrow = row + mrow;
+  if (mrow < (maxrow - srow)) {
+    maxrow = srow + mrow;
   }
 
   for (row = srow; row < maxrow; row++) {
     idx = row * CFG_COLS;
-    snprintf_P(log, sizeof(log), PSTR("%04X:"), idx);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%04X:"), idx);
     for (col = 0; col < CFG_COLS; col++) {
       if (!(col%4)) {
-        snprintf_P(log, sizeof(log), PSTR("%s "), log);
+        snprintf_P(log_data, sizeof(log_data), PSTR("%s "), log_data);
       }
-      snprintf_P(log, sizeof(log), PSTR("%s %02X"), log, buffer[idx + col]);
+      snprintf_P(log_data, sizeof(log_data), PSTR("%s %02X"), log_data, buffer[idx + col]);
     }
-    snprintf_P(log, sizeof(log), PSTR("%s |"), log);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%s |"), log_data);
     for (col = 0; col < CFG_COLS; col++) {
 //      if (!(col%4)) {
-//        snprintf_P(log, sizeof(log), PSTR("%s "), log);
+//        snprintf_P(log_data, sizeof(log_data), PSTR("%s "), log_data);
 //      }
-      snprintf_P(log, sizeof(log), PSTR("%s%c"), log, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
+      snprintf_P(log_data, sizeof(log_data), PSTR("%s%c"), log_data, ((buffer[idx + col] > 0x20) && (buffer[idx + col] < 0x7F)) ? (char)buffer[idx + col] : ' ');
     }
-    snprintf_P(log, sizeof(log), PSTR("%s|"), log);
-    addLog(LOG_LEVEL_INFO, log);
+    snprintf_P(log_data, sizeof(log_data), PSTR("%s|"), log_data);
+    addLog(LOG_LEVEL_INFO);
+    delay(1);
   }
 }
 
@@ -343,10 +359,10 @@ void CFG_Dump(uint16_t srow, uint16_t mrow)
 
 void CFG_Default()
 {
-  addLog_P(LOG_LEVEL_NONE, PSTR("Cnfg: Use defaults"));
+  addLog_P(LOG_LEVEL_NONE, PSTR(D_LOG_CONFIG D_USE_DEFAULTS));
   CFG_DefaultSet1();
   CFG_DefaultSet2();
-  CFG_Save(1);
+  CFG_Save(2);
 }
 
 void CFG_DefaultSet1()
@@ -358,11 +374,11 @@ void CFG_DefaultSet1()
   sysCfg.version = VERSION;
 //  sysCfg.bootcount = 0;
 }
-  
+
 void CFG_DefaultSet2()
 {
   memset((char*)&sysCfg +16, 0x00, sizeof(SYSCFG) -16);
-  
+
   sysCfg.flag.savestate = SAVE_STATE;
   sysCfg.savedata = SAVE_DATA;
   sysCfg.timezone = APP_TIMEZONE;
@@ -481,6 +497,11 @@ void CFG_DefaultSet2()
   // 5.2.0
   sysCfg.param[P_MAX_POWER_RETRY] = MAX_POWER_RETRY;
 
+  // 5.4.1
+  memcpy_P(sysCfg.sfb_code[0], sfb_codeDefault, 9);
+
+  // 5.8.0
+  sysCfg.led_pixels = 1;
 }
 
 /********************************************************************************************/
@@ -514,7 +535,7 @@ void CFG_DefaultSet_3_9_3()
     sysCfg.my_module.gp.io[i] = 0;
   }
 
-  sysCfg.led_pixels = 0;
+  sysCfg.led_pixels = WS2812_LEDS;
   for (byte i = 0; i < 5; i++) {
     sysCfg.led_color[i] = 255;
   }
@@ -523,9 +544,9 @@ void CFG_DefaultSet_3_9_3()
     sysCfg.led_dimmer[i] = 10;
   }
   sysCfg.led_fade = 0;
-  sysCfg.led_speed = 0;
+  sysCfg.led_speed = 1;
   sysCfg.led_scheme = 0;
-  sysCfg.led_width = 0;
+  sysCfg.led_width = 1;
   sysCfg.led_wakeup = 0;
 }
 
@@ -595,7 +616,7 @@ void CFG_Delta()
       strlcpy(sysCfg.friendlyname[1], FRIENDLY_NAME"2", sizeof(sysCfg.friendlyname[1]));
       strlcpy(sysCfg.friendlyname[2], FRIENDLY_NAME"3", sizeof(sysCfg.friendlyname[2]));
       strlcpy(sysCfg.friendlyname[3], FRIENDLY_NAME"4", sizeof(sysCfg.friendlyname[3]));
-    }      
+    }
     if (sysCfg.version < 0x03020800) {  // 3.2.8 - Add parameter
       strlcpy(sysCfg.switch_topic, sysCfg.button_topic, sizeof(sysCfg.switch_topic));
       sysCfg.ex_mqtt_switch_retain = MQTT_SWITCH_RETAIN;
@@ -672,7 +693,9 @@ void CFG_Delta()
       }
     }
     if (sysCfg.version < 0x05010600) {
-      memcpy(sysCfg.state_text, sysCfg.ex_state_text, 33);
+      if (sysCfg.version > 0x04010100) {
+        memcpy(sysCfg.state_text, sysCfg.ex_state_text, 33);
+      }
       strlcpy(sysCfg.state_text[3], MQTT_CMND_HOLD, sizeof(sysCfg.state_text[3]));
     }
     if (sysCfg.version < 0x05010700) {
@@ -681,8 +704,39 @@ void CFG_Delta()
     if (sysCfg.version < 0x05020000) {
       sysCfg.param[P_MAX_POWER_RETRY] = MAX_POWER_RETRY;
     }
-    
+    if (sysCfg.version < 0x05050000) {
+      for (byte i = 0; i < 17; i++) {
+        sysCfg.sfb_code[i][0] = 0;
+      }
+      memcpy_P(sysCfg.sfb_code[0], sfb_codeDefault, 9);
+    }
+    if (sysCfg.version < 0x05080000) {
+      uint8_t cfg_wsflg = 0;
+      for (byte i = 0; i < MAX_GPIO_PIN; i++) {
+        if (GPIO_WS2812 == sysCfg.my_module.gp.io[i]) {
+          cfg_wsflg = 1;
+        }
+      }
+      if (!sysCfg.led_pixels && cfg_wsflg) {
+        sysCfg.led_pixels = sysCfg.ws_pixels;
+        sysCfg.led_color[0] = sysCfg.ws_red;
+        sysCfg.led_color[1] = sysCfg.ws_green;
+        sysCfg.led_color[2] = sysCfg.ws_blue;
+        sysCfg.led_dimmer[0] = sysCfg.ws_dimmer;
+        sysCfg.led_table = sysCfg.ws_ledtable;
+        sysCfg.led_fade = sysCfg.ws_fade;
+        sysCfg.led_speed = sysCfg.ws_speed;
+        sysCfg.led_scheme = sysCfg.ws_scheme;
+        sysCfg.led_width = sysCfg.ws_width;
+        sysCfg.led_wakeup = sysCfg.ws_wakeup;
+      } else {
+        sysCfg.led_pixels = 1;
+        sysCfg.led_width = 1;
+      }
+    }
+
     sysCfg.version = VERSION;
+    CFG_Save(1);
   }
 }
 
