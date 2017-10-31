@@ -17,6 +17,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _USER_CONFIG_H_
+#define _USER_CONFIG_H_
+
 /*********************************************************************************************\
  * ATTENTION: Changes to most PARAMETER defines will only override flash settings if you change
  *            define CFG_HOLDER.
@@ -112,7 +115,7 @@
   #define DOMOTICZ_UPDATE_TIMER  0               // [DomoticzUpdateTimer] Send relay status (0 = disable, 1 - 3600 seconds) (Optional)
 
 // -- HTTP ----------------------------------------
-#define USE_WEBSERVER                            // Enable web server and wifi manager (+62k code, +8k mem) - Disable by //
+#define USE_WEBSERVER                            // Enable web server and wifi manager (+66k code, +8k mem) - Disable by //
   #define WEB_SERVER           2                 // [WebServer] Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
   #define WEB_PORT             80                // Web server Port for User and Admin mode
   #define WEB_USERNAME         "admin"           // Web server Admin mode user name
@@ -163,17 +166,18 @@
 
 //#define USE_I2C                                  // I2C using library wire (+10k code, 0.2k mem) - Disable by //
   #define USE_BH1750                             // Add I2C code for BH1750 sensor
+//  #define USE_VEML6070                           // Add I2C code for VEML6070 sensor (+0.5k code)
   #define USE_BMP                                // Add I2C code for BMP/BME280 sensor
   #define USE_HTU                                // Add I2C code for HTU21/SI7013/SI7020/SI7021 sensor
   #define USE_SHT                                // Add I2C emulating code for SHT1X sensor
 
 //#define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+3k code, 0.3k mem)
 //  #define USE_IR_HVAC                            // Support for HVAC system using IR (+2k code)
+  #define USE_IR_RECEIVE                         // Support for IR receiver (+4k code)
 
 #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem) - Disable by //
   #define USE_WS2812_CTYPE     1                 // WS2812 Color type (0 - RGB, 1 - GRB)
-//  #define USE_WS2812_DMA                         // DMA supports only GPIO03 (= Serial RXD) (+1k mem)
-                                                 //   When USE_WS2812_DMA is enabled expect Exceptions on Pow
+//  #define USE_WS2812_DMA                         // DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow
 
 /*********************************************************************************************\
  * Compile a minimal version if upgrade memory gets tight ONLY TO BE USED FOR UPGRADE STEP 1!
