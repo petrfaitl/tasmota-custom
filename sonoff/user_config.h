@@ -33,7 +33,7 @@
 //#define MY_LANGUAGE            nl-NL
 
 // -- Project -------------------------------------
-#define PROJECT                "LawnIrrigationTEST_BOARD"          // PROJECT is used as the default topic delimiter and OTA file name
+#define PROJECT                "bear_iot"          // PROJECT is used as the default topic delimiter and OTA file name
                                                  //   As an IDE restriction it needs to be the same as the main .ino file
 
 #define CFG_HOLDER             0x20161209        // [Reset 1] Change this value to load following default configuration parameters
@@ -42,16 +42,16 @@
 
 // -- Wifi ----------------------------------------
 #define WIFI_IP_ADDRESS        "0.0.0.0"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or IP address
-#define WIFI_GATEWAY           "192.168.1.253"   // {IpAddress2] If not using DHCP set Gateway IP address
+#define WIFI_GATEWAY           "0.0.0.0"   // {IpAddress2] If not using DHCP set Gateway IP address
 #define WIFI_SUBNETMASK        "255.255.255.0"   // [IpAddress3] If not using DHCP set Network mask
-#define WIFI_DNS               "192.168.1.253"    // [IpAddress4] If not using DHCP set DNS IP address (might be equal to WIFI_GATEWAY)
+#define WIFI_DNS               "0.0.0.0"    // [IpAddress4] If not using DHCP set DNS IP address (might be equal to WIFI_GATEWAY)
 
 
-#define STA_SSID1              "PEKLO.WIFI"      // [Ssid1] Wifi SSID
-#define STA_PASS1              "56e149e9B3"  // [Password1] Wifi password
+#define STA_SSID1              "none"      // [Ssid1] Wifi SSID
+#define STA_PASS1              "none"  // [Password1] Wifi password
 #define STA_SSID2              "unused"      // [Ssid2] Optional alternate AP Wifi SSID
 #define STA_PASS2              "unused"  // [Password2] Optional alternate AP Wifi password
-#define WIFI_CONFIG_TOOL       WIFI_MANAGER    // [WifiConfig] Default tool if wifi fails to connect
+#define WIFI_CONFIG_TOOL       WIFI_SMARTCONFIG    // [WifiConfig] Default tool if wifi fails to connect
                                                  //   (WIFI_RESTART, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG, WIFI_RETRY)
 
 // -- Syslog --------------------------------------
@@ -70,13 +70,13 @@
 //#define USE_MQTT_TLS                             // EXPERIMENTAL Use TLS for MQTT connection (+53k code, +20k mem) - Disable by //
                                                  //   Needs Fingerprint, TLS Port, UserId and Password
 #ifdef USE_MQTT_TLS
-  #define MQTT_HOST            "192.168.1.99"  // [MqttHost]
+  #define MQTT_HOST            "m14.cloudmqtt.com"  // [MqttHost]
   #define MQTT_FINGERPRINT     "A5 02 FF 13 99 9F 8B 39 8E F1 83 4F 11 23 65 0B 32 36 FC 07"  // [MqttFingerprint]
-  #define MQTT_PORT            8883                // [MqttPort] MQTT TLS port
+  #define MQTT_PORT            14770                // [MqttPort] MQTT TLS port
   #define MQTT_USER            "DVES_USER"      // [MqttUser] Mandatory user
   #define MQTT_PASS            "DVES_PASS"  // [MqttPassword] Mandatory password
 #else
-  #define MQTT_HOST            "192.168.1.99"          // [MqttHost]
+  #define MQTT_HOST            "m14.cloudmqtt.com"          // [MqttHost]
   #define MQTT_PORT            1883              // [MqttPort] MQTT port (10123 on CloudMQTT)
   #define MQTT_USER            "DVES_USER"       // [MqttUser] Optional user
   #define MQTT_PASS            "DVES_PASS"       // [MqttPassword] Optional password
@@ -115,14 +115,14 @@
   #define DOMOTICZ_UPDATE_TIMER  0               // [DomoticzUpdateTimer] Send relay status (0 = disable, 1 - 3600 seconds) (Optional)
 
 // -- HTTP ----------------------------------------
-#define USE_WEBSERVER                            // Enable web server and wifi manager (+66k code, +8k mem) - Disable by //
+  #define USE_WEBSERVER                            // Enable web server and wifi manager (+66k code, +8k mem) - Disable by //
   #define WEB_SERVER           2                 // [WebServer] Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
   #define WEB_PORT             80                // Web server Port for User and Admin mode
   #define WEB_USERNAME         "admin"           // Web server Admin mode user name
   #define WEB_PASSWORD         "hex4g0n5"                // [WebPassword] Web server Admin mode Password for WEB_USERNAME (empty string = Disable)
-  #define FRIENDLY_NAME        "Front Lawn Irrigation TEST BOARD"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+  #define FRIENDLY_NAME        "Bear IOT Board"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
   #define USE_EMULATION                          // Enable Belkin WeMo and Hue Bridge emulation for Alexa (+11k code, +2k mem)
-    #define EMULATION          EMUL_NONE         // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
+  #define EMULATION          EMUL_NONE         // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
 
 // -- mDNS ----------------------------------------
 //#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code, +0.3k mem) - Disable by //
@@ -130,15 +130,15 @@
   #define MQTT_HOST_DISCOVERY                    // Find MQTT host server (overrides MQTT_HOST if found)
 
 // -- Time - Up to three NTP servers in your region
-#define NTP_SERVER1            "nz.pool.ntp.org"       // [NtpServer1] Select first NTP server by name or IP address (129.250.35.250)
-#define NTP_SERVER2            "0.nz.pool.ntp.org"    // [NtpServer2] Select second NTP server by name or IP address (5.39.184.5)
+#define NTP_SERVER1            "pool.ntp.org"       // [NtpServer1] Select first NTP server by name or IP address (129.250.35.250)
+#define NTP_SERVER2            "nz.pool.ntp.org"    // [NtpServer2] Select second NTP server by name or IP address (5.39.184.5)
 #define NTP_SERVER3            "1.nz.pool.ntp.org"  // [NtpServer3] Select third NTP server by name or IP address (93.94.224.67)
 
 // -- Time - Start Daylight Saving Time and timezone offset from UTC in minutes
-#define TIME_DST               Last, Sun, Oct, 2, +120  // Last sunday in march at 02:00 +120 minutes
+#define TIME_DST               Last, Sun, Oct, 2, +780  // Last sunday in march at 02:00 +120 minutes
 
 // -- Time - Start Standard Time and timezone offset from UTC in minutes
-#define TIME_STD               Last, Sun, Mar, 3, +60   // Last sunday in october 02:00 +60 minutes
+#define TIME_STD               Last, Sun, Mar, 3, +720   // Last sunday in october 02:00 +60 minutes
 
 // -- Application ---------------------------------
 #define APP_TIMEZONE           12                 // [Timezone] +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
@@ -162,9 +162,9 @@
 // -- Sensor code selection -----------------------
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
 
-//#define USE_DS18x20                              // Optional using OneWire library for multiple DS18B20 and/or DS18S20 (+2k code)
+#define USE_DS18x20                              // Optional using OneWire library for multiple DS18B20 and/or DS18S20 (+2k code)
 
-//#define USE_I2C                                  // I2C using library wire (+10k code, 0.2k mem) - Disable by //
+#define USE_I2C                                  // I2C using library wire (+10k code, 0.2k mem) - Disable by //
   #define USE_BH1750                             // Add I2C code for BH1750 sensor
 //  #define USE_VEML6070                           // Add I2C code for VEML6070 sensor (+0.5k code)
   #define USE_BMP                                // Add I2C code for BMP/BME280 sensor
@@ -173,7 +173,7 @@
 
 //#define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+3k code, 0.3k mem)
 //  #define USE_IR_HVAC                            // Support for HVAC system using IR (+2k code)
-  #define USE_IR_RECEIVE                         // Support for IR receiver (+4k code)
+//  #define USE_IR_RECEIVE                         // Support for IR receiver (+4k code)
 
 #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem) - Disable by //
   #define USE_WS2812_CTYPE     1                 // WS2812 Color type (0 - RGB, 1 - GRB)
@@ -192,9 +192,9 @@
  * No user configurable items below
 \*********************************************************************************************/
 
-#if defined(USE_MQTT_TLS) && defined(USE_WEBSERVER)
-  #error "Select either USE_MQTT_TLS or USE_WEBSERVER as there is just not enough memory to play with"
-#endif
+// #if defined(USE_MQTT_TLS) && defined(USE_WEBSERVER)
+//   #error "Select either USE_MQTT_TLS or USE_WEBSERVER as there is just not enough memory to play with"
+// #endif
 
 #if (ARDUINO < 10610)
   #error "This software is supported with Arduino IDE starting from 1.6.10 and ESP8266 Release 2.3.0"
