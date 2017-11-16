@@ -119,7 +119,7 @@
   #define WEB_SERVER           2                 // [WebServer] Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
   #define WEB_PORT             80                // Web server Port for User and Admin mode
   #define WEB_USERNAME         "admin"           // Web server Admin mode user name
-  #define WEB_PASSWORD         "hex4g0n5"                // [WebPassword] Web server Admin mode Password for WEB_USERNAME (empty string = Disable)
+  #define WEB_PASSWORD         "admin"                // [WebPassword] Web server Admin mode Password for WEB_USERNAME (empty string = Disable)
   #define FRIENDLY_NAME        "Bear IOT Board"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
   #define USE_EMULATION                          // Enable Belkin WeMo and Hue Bridge emulation for Alexa (+11k code, +2k mem)
   #define EMULATION          EMUL_NONE         // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
@@ -162,14 +162,15 @@
 // -- Sensor code selection -----------------------
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
 
-#define USE_DS18x20                              // Optional using OneWire library for multiple DS18B20 and/or DS18S20 (+2k code)
+//#define USE_DS18x20                              // Optional for multiple DS18B20 and/or DS18S20 sensors using library OneWire (+2k code)
 
 #define USE_I2C                                  // I2C using library wire (+10k code, 0.2k mem) - Disable by //
+  #define USE_SHT                                // Add I2C emulating code for SHT1X sensor
+  #define USE_HTU                                // Add I2C code for HTU21/SI7013/SI7020/SI7021 sensor
+  #define USE_BMP                                // Add I2C code for BMP/BME280 sensor
   #define USE_BH1750                             // Add I2C code for BH1750 sensor
 //  #define USE_VEML6070                           // Add I2C code for VEML6070 sensor (+0.5k code)
-  #define USE_BMP                                // Add I2C code for BMP/BME280 sensor
-  #define USE_HTU                                // Add I2C code for HTU21/SI7013/SI7020/SI7021 sensor
-  #define USE_SHT                                // Add I2C emulating code for SHT1X sensor
+//  #define USE_ADS1115                            // Add I2C code for ADS1x15 16 bit A/D converter using library i2cdevlib-Core and i2cdevlib-ADS1115 (+2k code)
 
 //#define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+3k code, 0.3k mem)
 //  #define USE_IR_HVAC                            // Support for HVAC system using IR (+2k code)
@@ -192,9 +193,9 @@
  * No user configurable items below
 \*********************************************************************************************/
 
-// #if defined(USE_MQTT_TLS) && defined(USE_WEBSERVER)
-//   #error "Select either USE_MQTT_TLS or USE_WEBSERVER as there is just not enough memory to play with"
-// #endif
+#if defined(USE_MQTT_TLS) && defined(USE_WEBSERVER)
+  #error "Select either USE_MQTT_TLS or USE_WEBSERVER as there is just not enough memory to play with"
+#endif
 
 #if (ARDUINO < 10610)
   #error "This software is supported with Arduino IDE starting from 1.6.10 and ESP8266 Release 2.3.0"
