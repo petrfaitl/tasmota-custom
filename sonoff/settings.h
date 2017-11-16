@@ -70,10 +70,10 @@ struct SYSCFG {
   byte          seriallog_level;           // 09E
   uint8_t       sta_config;                // 09F
   byte          sta_active;                // 0A0
-  char          sta_ssid[2][33];           // 0A1
+  char          sta_ssid[2][60];           // 0A1
   char          sta_pwd[2][65];            // 0E3
-  char          hostname[33];              // 165
-  char          syslog_host[33];           // 186
+  char          hostname[60];              // 165
+  char          syslog_host[60];           // 186
 
   byte          free_1A7[1];               // 1A7
 
@@ -82,14 +82,14 @@ struct SYSCFG {
   uint8_t       webserver;                 // 1AB
   byte          weblog_level;              // 1AC
   char          mqtt_fingerprint[60];      // 1AD To be freed by binary fingerprint
-  char          mqtt_host[33];             // 1E9
+  char          mqtt_host[60];             // 1E9
   uint16_t      mqtt_port;                 // 20A
-  char          mqtt_client[33];           // 20C
-  char          mqtt_user[33];             // 22D
-  char          mqtt_pwd[33];              // 24E
-  char          mqtt_topic[33];            // 26F
-  char          button_topic[33];          // 290
-  char          mqtt_grptopic[33];         // 2B1
+  char          mqtt_client[60];           // 20C
+  char          mqtt_user[60];             // 22D
+  char          mqtt_pwd[60];              // 24E
+  char          mqtt_topic[60];            // 26F
+  char          button_topic[60];          // 290
+  char          mqtt_grptopic[60];         // 2B1
   uint8_t       mqtt_fingerprinth[20];     // 2D2 Reserved for binary fingerprint
 
   uint16_t      pwm_frequency;             // 2E6
@@ -152,8 +152,8 @@ struct SYSCFG {
   byte          free_3A9[1];               // 3A9
 
   uint16_t      ws_wakeup;                 // 3AA Not used since 5.8.0
-  char          friendlyname[MAX_FRIENDLYNAMES][33]; // 3AC
-  char          switch_topic[33];          // 430
+  char          friendlyname[MAX_FRIENDLYNAMES][60]; // 3AC
+  char          switch_topic[60];          // 430
 
   byte          free_451[2];               // 451
 
@@ -184,9 +184,9 @@ struct SYSCFG {
 
   byte          free_4A8[1];               // 4A8
 
-  char          web_password[33];          // 4A9
+  char          web_password[60];          // 4A9
   uint8_t       switchmode[MAX_SWITCHES];  // 4CA
-  char          ntp_server[3][33];         // 4CE
+  char          ntp_server[3][60];         // 4CE
 
   byte          free_531[1];               // 531
 
