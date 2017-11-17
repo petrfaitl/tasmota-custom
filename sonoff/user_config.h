@@ -33,7 +33,7 @@
 //#define MY_LANGUAGE            nl-NL
 
 // -- Project -------------------------------------
-#define PROJECT                "bear_iot"          // PROJECT is used as the default topic delimiter and OTA file name
+#define PROJECT                "bear_iot_d1"          // PROJECT is used as the default topic delimiter and OTA file name
                                                  //   As an IDE restriction it needs to be the same as the main .ino file
 
 #define CFG_HOLDER             0x20161209        // [Reset 1] Change this value to load following default configuration parameters
@@ -47,11 +47,11 @@
 #define WIFI_DNS               "0.0.0.0"    // [IpAddress4] If not using DHCP set DNS IP address (might be equal to WIFI_GATEWAY)
 
 
-#define STA_SSID1              "none"      // [Ssid1] Wifi SSID
-#define STA_PASS1              "none"  // [Password1] Wifi password
+#define STA_SSID1              "unused"      // [Ssid1] Wifi SSID
+#define STA_PASS1              "unused"  // [Password1] Wifi password
 #define STA_SSID2              "unused"      // [Ssid2] Optional alternate AP Wifi SSID
 #define STA_PASS2              "unused"  // [Password2] Optional alternate AP Wifi password
-#define WIFI_CONFIG_TOOL       WIFI_SMARTCONFIG    // [WifiConfig] Default tool if wifi fails to connect
+#define WIFI_CONFIG_TOOL       WIFI_MANAGER    // [WifiConfig] Default tool if wifi fails to connect
                                                  //   (WIFI_RESTART, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG, WIFI_RETRY)
 
 // -- Syslog --------------------------------------
@@ -76,7 +76,7 @@
   #define MQTT_USER            "DVES_USER"      // [MqttUser] Mandatory user
   #define MQTT_PASS            "DVES_PASS"  // [MqttPassword] Mandatory password
 #else
-  #define MQTT_HOST            "m14.cloudmqtt.com"          // [MqttHost]
+  #define MQTT_HOST            "192.168.1.99"          // [MqttHost]
   #define MQTT_PORT            1883              // [MqttPort] MQTT port (10123 on CloudMQTT)
   #define MQTT_USER            "DVES_USER"       // [MqttUser] Optional user
   #define MQTT_PASS            "DVES_PASS"       // [MqttPassword] Optional password
@@ -101,7 +101,8 @@
 #define PUB_PREFIX2            "tele"            // [Prefix3] Sonoff devices publish telemetry data to %prefix%/%topic% being PUB_PREFIX2/MQTT_TOPIC/UPTIME, POWER and TIME
                                                  //   May be named the same as PUB_PREFIX
 // %topic% token options (also ButtonTopic and SwitchTopic)
-#define MQTT_TOPIC             PROJECT           // [Topic] (unique) MQTT device topic
+//#define MQTT_TOPIC             PROJECT           // [Topic] (unique) MQTT device topic
+#define MQTT_TOPIC             "bear_iot_%06X" // [Topic] (unique) MQTT device topic
 #define MQTT_GRPTOPIC          "wemos"         // [GroupTopic] MQTT Group topic
 #define MQTT_CLIENT_ID         "DVES_%06X"       // [MqttClient] Also fall back topic using Chip Id = last 6 characters of MAC address
 
@@ -135,10 +136,10 @@
 #define NTP_SERVER3            "1.nz.pool.ntp.org"  // [NtpServer3] Select third NTP server by name or IP address (93.94.224.67)
 
 // -- Time - Start Daylight Saving Time and timezone offset from UTC in minutes
-#define TIME_DST               Last, Sun, Oct, 2, +780  // Last sunday in march at 02:00 +120 minutes
+#define TIME_DST               Last, Sun, Oct, 2, +120  // Last sunday in march at 02:00 +120 minutes
 
 // -- Time - Start Standard Time and timezone offset from UTC in minutes
-#define TIME_STD               Last, Sun, Mar, 3, +720   // Last sunday in october 02:00 +60 minutes
+#define TIME_STD               Last, Sun, Mar, 3, +60   // Last sunday in october 02:00 +60 minutes
 
 // -- Application ---------------------------------
 #define APP_TIMEZONE           12                 // [Timezone] +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
